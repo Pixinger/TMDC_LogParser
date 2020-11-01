@@ -81,7 +81,17 @@ namespace TMDC_LogParser
 
                 this.rtxtMission.AppendText("\n");
                 this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("KILLED:\n");
+                this.rtxtMission.AppendText("DEAD:\n");
+                this.rtxtMission.AppendText("-------------------------------\n");
+                var deadList = mission.GetDeads();
+                foreach (var item in deadList)
+                {
+                    this.rtxtMission.AppendText(item.ToString() + "\n");
+                }
+
+                this.rtxtMission.AppendText("\n");
+                this.rtxtMission.AppendText("-------------------------------\n");
+                this.rtxtMission.AppendText("KILLS:\n");
                 this.rtxtMission.AppendText("-------------------------------\n");
                 var killedList = mission.GetKills();
                 foreach (var item in killedList)
@@ -108,6 +118,25 @@ namespace TMDC_LogParser
                 {
                     this.rtxtMission.AppendText(item.ToString() + "\n");
                 }
+
+
+                var summarySides = mission.GetSummarySides();
+                foreach (var side in summarySides)
+                {
+                    this.rtxtMission.AppendText("\n");
+                    this.rtxtMission.AppendText("-------------------------------\n");
+                    this.rtxtMission.AppendText($"SUMMARY: {side.SideId}\n");
+                    this.rtxtMission.AppendText("-------------------------------\n");
+                    foreach (var group in side.Groups)
+                    {
+                        this.rtxtMission.AppendText($"### Group: {group.Name}\n");
+                        foreach (var unit in group.Units)
+                        {
+                            this.rtxtMission.AppendText(unit.ToString() + "\n");
+                        }
+                    }
+                }
+
             }
         }
         private void menOpen_Click(object sender, System.EventArgs e)

@@ -18,7 +18,7 @@ namespace TMDC_LogParser
             public readonly string PositionZ;
 
             private Match _Match = null;
-            protected Match Match { get => _Match; }
+            protected Match Match { get => this._Match; }
 
 
             public DcsObject(string line)
@@ -73,7 +73,25 @@ namespace TMDC_LogParser
 
             public override string ToString()
             {
-                return $"Grp({Group}), Name({Unit}), Id({Id}), Type({Type}), Pos({PositionX}/{PositionY}/{PositionZ})";
+                return $"Grp({this.Group}), Name({this.Unit}), Id({this.Id}), Type({this.Type}), Pos({this.PositionX}/{this.PositionY}/{this.PositionZ})";
+            }
+        }
+        #endregion
+        #region public class DcsDeadObject : DcsObject
+        public class DcsDeadObject : DcsObject
+        {
+            public DcsDeadObject(string line)
+                : base(line)
+            {
+            }
+        }
+        #endregion
+        #region public class DcsCrashedObject : DcsObject
+        public class DcsCrashedObject : DcsObject
+        {
+            public DcsCrashedObject(string line)
+                : base(line)
+            {
             }
         }
         #endregion
@@ -94,10 +112,53 @@ namespace TMDC_LogParser
 
             public override string ToString()
             {
-                return base.ToString() + $", {WeaponType}"; 
+                return base.ToString() + $", Weapon({this.WeaponType})";
             }
         }
         #endregion
+        #region public class DcsKilledObject : DcsObject
+        public class DcsKilledObject : DcsObject
+        {
+            public readonly string Initiator;
+
+            public DcsKilledObject(string line)
+                : base(line)
+            {
+                if (this.Match.Groups.Count > 8)
+                    this.Initiator = this.Match.Groups[8].Value;
+                else
+                    this.Initiator = "";
+
+            }
+
+            public override string ToString()
+            {
+                return base.ToString() + $", Killer({this.Initiator})";
+            }
+        }
+        #endregion
+        #region public class DcsSummaryObject : DcsObject
+        public class DcsSummaryObject : DcsObject
+        {
+            public readonly string Life;
+
+            public DcsSummaryObject(string line)
+                : base(line)
+            {
+                if (this.Match.Groups.Count > 8)
+                    this.Life = this.Match.Groups[8].Value;
+                else
+                    this.Life = "";
+
+            }
+
+            public override string ToString()
+            {
+                return base.ToString() + $", Life({this.Life})";
+            }
+        }
+        #endregion
+
         #region public class CapturedObject
         public class CapturedObject
         {
@@ -124,19 +185,110 @@ namespace TMDC_LogParser
 
             public override string ToString()
             {
-                return $"'{Coalition}' captured '{Place}' airbase";
+                return $"'{this.Coalition}' captured '{this.Place}' airbase";
             }
         }
 
         #endregion
 
+        #region public class Summary
+        public class Summary
+        {
+            private List<string> _Lines = new List<string>(); // Contains the RAW log text
+
+            #region public class Side
+            public class Side
+            {
+                public readonly string SideId;
+                public readonly List<Group> Groups = new List<Group>();
+
+                public Side(string sideId)
+                {
+                    this.SideId = sideId;
+                }
+            }
+            #endregion
+            #region public class Group
+            public class Group
+            {
+                public readonly string Name;
+                public readonly List<DcsSummaryObject> Units = new List<DcsSummaryObject>();
+
+                public Group(string name)
+                {
+                    this.Name = name;
+                }
+            }
+            #endregion
+
+            public readonly List<Side> Sides = new List<Side>();
+
+            public void AddLine(string line)
+            {
+                this._Lines.Add(line);
+            }
+
+            private bool CheckLine(int index, string text, out string data)
+            {
+                if (index >= this._Lines.Count)
+                {
+                    data = "";
+                    return false;
+                }
+
+                string line = this._Lines[index];
+                if (line.StartsWith(text))
+                {
+                    data = line.Remove(0, text.Length);
+                    return true;
+                }
+                else
+                {
+                    data = "";
+                    return false;
+                }
+            }
+
+            public void Parse()
+            {
+                this.Sides.Clear();
+
+                int i = 0;
+                while (this.CheckLine(i, "[SUM][SID]", out string data))
+                {
+                    Side side = new Side(data);
+                    this.Sides.Add(side);
+
+                    i++;
+                    while (CheckLine(i, "[SUM][GRP]", out data))
+                    {
+                        var group = new Group(data);
+                        side.Groups.Add(group);
+
+                        i++;
+                        while (CheckLine(i, "[SUM][UNI]", out data))
+                        {
+                            data = "[DUMMY]" + data; // We need this to match the REGEX
+                            var unit = new DcsSummaryObject(data);
+                            group.Units.Add(unit);
+
+                            i++;
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
         private List<string> _Lines = new List<string>(); // Contains the RAW log text
 
         // Used after calling Parse()
-        private List<DcsObject> _Crashes = new List<DcsObject>();
-        private List<DcsObject> _Kills = new List<DcsObject>();
+        private List<DcsCrashedObject> _Crashes = new List<DcsCrashedObject>();
+        private List<DcsDeadObject> _Deads = new List<DcsDeadObject>();
+        private List<DcsKilledObject> _Kills = new List<DcsKilledObject>();
         private List<DcsShotObject> _Shots = new List<DcsShotObject>();
         private List<CapturedObject> _Captures = new List<CapturedObject>();
+        private Summary _Summary = new Summary();
 
         public Mission(string init_time)
         {
@@ -146,8 +298,9 @@ namespace TMDC_LogParser
 
         public void Parse()
         {
+            this._Summary.Parse();
             this._Crashes.Clear();
-            this._Kills.Clear();
+            this._Deads.Clear();
             this._Shots.Clear();
             this._Captures.Clear();
 
@@ -156,11 +309,15 @@ namespace TMDC_LogParser
                 string line = this._Lines[i];
                 if (line.StartsWith("[CRASH]"))
                 {
-                    this._Crashes.Add(new DcsObject(line));
+                    this._Crashes.Add(new DcsCrashedObject(line));
+                }
+                else if (line.StartsWith("[DEAD]"))
+                {
+                    this._Deads.Add(new DcsDeadObject(line));
                 }
                 else if (line.StartsWith("[KILL]"))
                 {
-                    this._Kills.Add(new DcsObject(line));
+                    this._Kills.Add(new DcsKilledObject(line));
                 }
                 else if (line.StartsWith("[SHOT]"))
                 {
@@ -169,9 +326,6 @@ namespace TMDC_LogParser
                 else if (line.StartsWith("[BASE_CAPTURED]"))
                 {
                     this._Captures.Add(new CapturedObject(line));
-                }
-                else if (line.StartsWith("[SUM]"))
-                {
                 }
                 else if (line.StartsWith("[INIT]"))
                 {
@@ -189,7 +343,11 @@ namespace TMDC_LogParser
             var group = groups[4];
             if (group.Value.StartsWith("[END]"))
             {
-                EndTime = groups[1].Value;
+                this.EndTime = groups[1].Value;
+            }
+            else if (group.Value.StartsWith("[SUM]"))
+            {
+                this._Summary.AddLine(group.Value);
             }
             else
             {
@@ -199,14 +357,16 @@ namespace TMDC_LogParser
 
         public string InitTime { get; }
         public string EndTime { get; private set; }
-        public DcsObject[] GetCrashes() { return _Crashes.ToArray(); }
-        public DcsObject[] GetKills() { return _Kills.ToArray(); }
-        public DcsShotObject[] GetShots() { return _Shots.ToArray(); }
-        public CapturedObject[] GetCaptures() { return _Captures.ToArray(); }
+        public DcsObject[] GetCrashes() { return this._Crashes.ToArray(); }
+        public DcsObject[] GetDeads() { return this._Deads.ToArray(); }
+        public DcsObject[] GetKills() { return this._Kills.ToArray(); }
+        public DcsShotObject[] GetShots() { return this._Shots.ToArray(); }
+        public CapturedObject[] GetCaptures() { return this._Captures.ToArray(); }
+        public Summary.Side[] GetSummarySides() { return _Summary.Sides.ToArray(); }
 
         public override string ToString()
         {
-            return $"Mission: {InitTime} to {EndTime}";
+            return $"Mission: {this.InitTime} to {this.EndTime}";
         }
 
     }

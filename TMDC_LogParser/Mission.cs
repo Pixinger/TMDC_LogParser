@@ -1,79 +1,200 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace TMDC_LogParser
 {
-    internal class Mission
+    public class Mission
     {
-        #region public class DcsObject
-        public class DcsObject
+        #region public enum Coalitions 
+        public enum Coalitions : int
         {
-            public readonly string Group;
-            public readonly string Unit;
-            public readonly string Number;
-            public readonly string Id;
-            public readonly string Type;
-            public readonly string PositionX;
-            public readonly string PositionY;
-            public readonly string PositionZ;
+            Neutral = 0,
+            Red = 1,
+            Blue = 2,
+        }
+        #endregion
+        #region public enum Categories
+        public enum Categories
+        {
+            Airplane = 1,
+            Helcopter = 2,
+            Ground_Unit = 3,
+            Ship = 4,
+            Structure = 5,
+        }
+        #endregion
 
-            private Match _Match = null;
-            protected Match Match { get => this._Match; }
+        #region public class Coalition
+        public class Coalition
+        {
+            private readonly Coalitions _Coalition;
 
-
-            public DcsObject(string line)
+            public Coalition(string text)
             {
-                var regex = new Regex(@"(\[.+\])(.+)\|(.+)\|(\d+)\|(\d+)\|(.+)\|\((.+\|.+\|.+)\)\|?(.*)?");
-                this._Match = regex.Match(line);
-                if (this._Match.Success)
+                if (text.ToLower() == "red")
+                    this._Coalition = Coalitions.Red;
+                else if (text.ToLower() == "blue")
+                    this._Coalition = Coalitions.Blue;
+                else
+                    this._Coalition = Coalitions.Neutral;
+            }
+            public Coalition(Coalitions coalition)
+            {
+                this._Coalition = coalition;
+            }
+            public Coalition(int coalition)
+            {
+                this._Coalition = (Coalitions)coalition;
+            }
+
+            public int ToInt32() { return (int)_Coalition; }
+            public Coalitions ToEnum() { return _Coalition; }
+
+            public override string ToString()
+            {
+                return this._Coalition.ToString();
+            }
+        }
+        #endregion
+        #region public class Category
+        public class Category
+        {
+            private readonly Categories _Category;
+
+            public Category(Categories category)
+            {
+                this._Category = category;
+            }
+            public Category(int category)
+            {
+                this._Category = (Categories)category;
+            }
+
+            public bool IsAir
+            {
+                get
                 {
-                    if (this._Match.Groups.Count > 2)
-                        this.Group = this._Match.Groups[2].Value;
-                    else
-                        this.Group = "";
-
-                    if (this._Match.Groups.Count > 3)
-                        this.Unit = this._Match.Groups[3].Value;
-                    else
-                        this.Unit = "";
-
-                    if (this._Match.Groups.Count > 4)
-                        this.Number = this._Match.Groups[4].Value;
-                    else
-                        this.Number = "";
-
-                    if (this._Match.Groups.Count > 5)
-                        this.Id = this._Match.Groups[5].Value;
-                    else
-                        this.Id = "";
-
-                    if (this._Match.Groups.Count > 6)
-                        this.Type = this._Match.Groups[6].Value;
-                    else
-                        this.Type = "";
-
-                    if (this._Match.Groups.Count > 7)
-                    {
-                        this.PositionX = "";
-                        this.PositionY = "";
-                        this.PositionZ = "";
-
-                        var regexPos = new Regex(@"(-?[0-9]+.?[0-9]*)\|(-?[0-9]+.?[0-9]*)\|(-?[0-9]+.?[0-9]*)");
-                        var matchPos = regexPos.Match(this._Match.Groups[7].Value);
-
-                        if ((matchPos.Success) && (matchPos.Groups.Count == 4))
-                        {
-                            this.PositionX = matchPos.Groups[1].Value;
-                            this.PositionY = matchPos.Groups[2].Value;
-                            this.PositionZ = matchPos.Groups[3].Value;
-                        }
-                    }
+                    return (_Category == Categories.Airplane) || (_Category == Categories.Helcopter);
                 }
             }
 
             public override string ToString()
             {
-                return $"Grp({this.Group}), Name({this.Unit}), Id({this.Id}), Type({this.Type}), Pos({this.PositionX}/{this.PositionY}/{this.PositionZ})";
+                return this._Category.ToString();
+            }
+        }
+        #endregion
+        #region public class Weapon
+        public class Weapon
+        {
+            private readonly string _Weapon = "";
+
+            public Weapon(string text)
+            {
+                _Weapon = text;
+            }
+
+            public override string ToString()
+            {
+                return _Weapon != null? this._Weapon.ToString() : "";
+            }
+        }
+        #endregion
+        #region public class Position
+        public class Position
+        {
+            public readonly double X;
+            public readonly double Y;
+            public readonly double Z;
+
+            public Position(string position)
+            {
+                var regexPos = new Regex(@"(-?[0-9]+.?[0-9]*)\|(-?[0-9]+.?[0-9]*)\|(-?[0-9]+.?[0-9]*)");
+                var match = regexPos.Match(position);
+                if ((match.Success) && (match.Groups.Count == 4))
+                {
+                    this.X = Convert.ToDouble(match.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    this.Y = Convert.ToDouble(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                    this.Z = Convert.ToDouble(match.Groups[3].Value, System.Globalization.CultureInfo.InvariantCulture);
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"{this.X}/{this.Y}/{this.Z}";
+            }
+        }
+        #endregion
+        #region public class TypeName
+        public class TypeName
+        {
+            public readonly string Name;
+            public TypeName(string text)
+            {
+                this.Name = text;
+            }
+
+            public override string ToString()
+            {
+                return this.Name;
+            }
+        }
+        #endregion
+
+        #region public class DcsObject
+        public class DcsObject
+        {
+            public readonly double Time;
+            public readonly string GroupName;
+            public readonly string UnitName;
+            public readonly Coalition Coalition;
+            public readonly Category Category;
+            public readonly int Id;
+            public readonly TypeName TypeName;
+            public readonly Position Position;
+
+            public readonly string Remainder;
+
+            public DcsObject(string line)
+            {
+                // ---------------------- [FLAG]   Time | Grp  |Unit  | Coal | Cat  |UniId | Type |    position        |optional
+                var regex = new Regex(@"(\[.{4}\])(.+?)\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|(.+?)\|\((.+?\|.+?\|.+?)\)\|?(.*)?");
+                var match = regex.Match(line);
+                if (match.Success)
+                {
+                    if (match.Groups.Count > 2)
+                        this.Time = Convert.ToDouble(match.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+
+                    if (match.Groups.Count > 3)
+                        this.GroupName = match.Groups[3].Value;
+
+                    if (match.Groups.Count > 4)
+                        this.UnitName = match.Groups[4].Value;
+
+                    if (match.Groups.Count > 5)
+                        this.Coalition = new Coalition(Convert.ToInt32(match.Groups[5].Value));
+
+                    if (match.Groups.Count > 6)
+                        this.Category = new Category(Convert.ToInt32(match.Groups[6].Value));
+
+                    if (match.Groups.Count > 7)
+                        this.Id = Convert.ToInt32(match.Groups[7].Value);
+
+                    if (match.Groups.Count > 8)
+                        this.TypeName = new TypeName(match.Groups[8].Value);
+
+                    if (match.Groups.Count > 9)
+                        this.Position = new Position(match.Groups[9].Value);
+
+                    if (match.Groups.Count > 10)
+                        Remainder = match.Groups[10].Value;
+                }
+            }
+
+            public override string ToString()
+            {
+                return $"Grp({this.GroupName}), Unit({this.UnitName}), Coal({this.Coalition}), Cat({this.Category}), Id({this.Id}), Type({this.TypeName}), Pos({this.Position})";
             }
         }
         #endregion
@@ -103,8 +224,8 @@ namespace TMDC_LogParser
             public DcsShotObject(string line)
                 : base(line)
             {
-                if (this.Match.Groups.Count > 8)
-                    this.WeaponType = this.Match.Groups[8].Value;
+                if (Remainder != null)
+                    this.WeaponType = Remainder;
                 else
                     this.WeaponType = "";
 
@@ -119,37 +240,35 @@ namespace TMDC_LogParser
         #region public class DcsKilledObject : DcsObject
         public class DcsKilledObject : DcsObject
         {
-            public readonly string Initiator;
+            public readonly DcsObject Target;
+            public readonly Weapon Weapon;
 
             public DcsKilledObject(string line)
                 : base(line)
             {
-                if (this.Match.Groups.Count > 8)
-                    this.Initiator = this.Match.Groups[8].Value;
-                else
-                    this.Initiator = "";
-
+                if (Remainder != null)
+                {
+                    this.Target = new DcsObject(Remainder);
+                    this.Weapon = new Weapon(this.Target.Remainder);
+                }
             }
 
             public override string ToString()
             {
-                return base.ToString() + $", Killer({this.Initiator})";
+                return $"Killer({base.ToString()}) Target({this.Target}) Weapon({this.Weapon})";
             }
         }
         #endregion
         #region public class DcsSummaryObject : DcsObject
         public class DcsSummaryObject : DcsObject
         {
-            public readonly string Life;
+            public readonly double Life;
 
             public DcsSummaryObject(string line)
                 : base(line)
             {
-                if (this.Match.Groups.Count > 8)
-                    this.Life = this.Match.Groups[8].Value;
-                else
-                    this.Life = "";
-
+                if (Remainder != null)
+                    this.Life = Convert.ToDouble(Remainder, System.Globalization.CultureInfo.InvariantCulture);
             }
 
             public override string ToString()
@@ -260,15 +379,15 @@ namespace TMDC_LogParser
                     this.Sides.Add(side);
 
                     i++;
-                    while (CheckLine(i, "[SUM][GRP]", out data))
+                    while (this.CheckLine(i, "[SUM][GRP]", out data))
                     {
                         var group = new Group(data);
                         side.Groups.Add(group);
 
                         i++;
-                        while (CheckLine(i, "[SUM][UNI]", out data))
+                        while (this.CheckLine(i, "[SUM][UNI]", out data))
                         {
-                            data = "[DUMMY]" + data; // We need this to match the REGEX
+                            data = "[DUMMY]0|" + data; // We need this to match the REGEX
                             var unit = new DcsSummaryObject(data);
                             group.Units.Add(unit);
 
@@ -284,10 +403,13 @@ namespace TMDC_LogParser
 
         // Used after calling Parse()
         private List<DcsCrashedObject> _Crashes = new List<DcsCrashedObject>();
+        private List<DcsCrashedObject> _ShameCrashes = new List<DcsCrashedObject>(); // Wird aus Crashes und Killed errechnet.
         private List<DcsDeadObject> _Deads = new List<DcsDeadObject>();
         private List<DcsKilledObject> _Kills = new List<DcsKilledObject>();
         private List<DcsShotObject> _Shots = new List<DcsShotObject>();
+
         private List<CapturedObject> _Captures = new List<CapturedObject>();
+
         private Summary _Summary = new Summary();
 
         public Mission(string init_time)
@@ -307,15 +429,15 @@ namespace TMDC_LogParser
             for (int i = 0; i < this._Lines.Count; i++)
             {
                 string line = this._Lines[i];
-                if (line.StartsWith("[CRASH]"))
+                if (line.StartsWith("[CRSH]"))
                 {
                     this._Crashes.Add(new DcsCrashedObject(line));
                 }
                 else if (line.StartsWith("[DEAD]"))
                 {
                     this._Deads.Add(new DcsDeadObject(line));
-                }
-                else if (line.StartsWith("[KILL]"))
+                }               
+                else if (line.StartsWith("[KILR]"))
                 {
                     this._Kills.Add(new DcsKilledObject(line));
                 }
@@ -323,7 +445,7 @@ namespace TMDC_LogParser
                 {
                     this._Shots.Add(new DcsShotObject(line));
                 }
-                else if (line.StartsWith("[BASE_CAPTURED]"))
+                else if (line.StartsWith("[BASE]"))
                 {
                     this._Captures.Add(new CapturedObject(line));
                 }
@@ -337,6 +459,24 @@ namespace TMDC_LogParser
                 {
                 }
             }
+
+            // Jetzt müssen wir noch die Crashes mit den Kills vergleichen, um die selbstverschuldeten Abstürze zu finden.
+            List<DcsKilledObject> killers = new List<DcsKilledObject>(this.GetKillers());
+            List<DcsCrashedObject> crashes = new List<DcsCrashedObject>(this.GetCrashes());
+            foreach (var killer in killers)
+            {
+                var targetUnitName = killer.Target.UnitName;
+                for (int i = 0; i < crashes.Count; i++)
+                {
+                    if (crashes[i].UnitName == targetUnitName)
+                    {
+                        crashes.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+            // Die noch verbleibenden crashes sind shame's
+            _ShameCrashes.AddRange(crashes);
         }
         public void AddLine(GroupCollection groups)
         {
@@ -357,12 +497,14 @@ namespace TMDC_LogParser
 
         public string InitTime { get; }
         public string EndTime { get; private set; }
-        public DcsObject[] GetCrashes() { return this._Crashes.ToArray(); }
-        public DcsObject[] GetDeads() { return this._Deads.ToArray(); }
-        public DcsObject[] GetKills() { return this._Kills.ToArray(); }
+
+        public DcsCrashedObject[] GetShameCrashes() { return this._ShameCrashes.ToArray(); }
+        public DcsCrashedObject[] GetCrashes() { return this._Crashes.ToArray(); }
+        public DcsDeadObject[] GetDeads() { return this._Deads.ToArray(); }
+        public DcsKilledObject[] GetKillers() { return this._Kills.ToArray(); }
         public DcsShotObject[] GetShots() { return this._Shots.ToArray(); }
         public CapturedObject[] GetCaptures() { return this._Captures.ToArray(); }
-        public Summary.Side[] GetSummarySides() { return _Summary.Sides.ToArray(); }
+        public Summary.Side[] GetSummarySides() { return this._Summary.Sides.ToArray(); }
 
         public override string ToString()
         {

@@ -6,21 +6,36 @@
 pixLogger = mist.Logger:new("[[TMDC]]", "info") --warning, error, info, none/off
 pixLogger:info("[INIT]")
 
+local function ComposeUnitString(unit)
+	if (unit) then
+		local position = unit:getPosition();
+		local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"
+		
+		local groupName = ""
+		if (unit:getGroup()) then
+			groupName = unit:getGroup():getName()
+		end
+
+		return groupName .. "|" .. unit:getName() .. "|" .. unit:getCoalition() .. "|" .. Unit.getCategory(unit) .. "|" .. unit:getID() .. "|" .. unit:getTypeName() .. "|" .. positionStr
+	else
+		return  "||||||"
+	end
+end
 
 function dumpPix(o)
-   if (0 == nil) then
+	if (0 == nil) then
 		return '<nil>'
-   else
-	   if type(o) == 'table' then
-		  local s = '{ '
-		  for k,v in pairs(o) do
-			 if type(k) ~= 'number' then k = '"'..k..'"' end
-			 s = s .. '['..k..'] = ' .. dumpPix(v) .. ','
-		  end
-		  return s .. '} '
-	   else
-		  return tostring(o)
-	   end
+	else
+		if type(o) == 'table' then
+			local s = '{ '
+			for k,v in pairs(o) do
+				if type(k) ~= 'number' then k = '"'..k..'"' end
+				s = s .. '['..k..'] = ' .. dumpPix(v) .. ','
+			end
+			return s .. '} '
+		else
+			return tostring(o)
+		end
 	end	
 end
 
@@ -30,16 +45,7 @@ function LogUnitPositions(coalitionId) -- 0=Neutral, 1=red, 2=blue
 		pixLogger:info("[SUM][GRP]" .. group:getName())
 	
 		for iUnit, unit in pairs(group:getUnits()) do
-			local position = unit:getPosition();
-			local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"		
-			local groupName = unit:getGroup()
-			if (groupName) then
-				groupName = groupName:getName()
-			else
-				groupName = "nil"
-			end
-			pixLogger:info("[SUM][UNI]" .. groupName .. "|" .. unit:getName() .. "|" .. unit:getNumber() .. "|" .. unit:getID() .. "|" .. unit:getTypeName() .. "|" .. positionStr .. "|" .. unit:getLife())
-		
+			pixLogger:info("[SUM][UNI]" .. ComposeUnitString(unit) .. "|" .. unit:getLife())
 		end		
 	end
 end
@@ -54,57 +60,38 @@ local function onEvent(event)
 		pixLogger:info("[END]")
 	end
 	
+	-- Für Luftfahrzeuge
 	if event.id == world.event.S_EVENT_CRASH and event.initiator then
-		local position = event.initiator:getPosition();
-		local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"
-		local groupName = event.initiator:getGroup()
-		if (groupName) then
-			groupName = groupName:getName()
-		else
-			groupName = "nil"
-		end
-		pixLogger:info("[CRASH]" .. groupName .. "|" .. event.initiator:getName() .. "|" .. event.initiator:getNumber() .. "|" .. event.initiator:getID() .. "|" .. event.initiator:getTypeName() .. "|" .. positionStr)
+		pixLogger:info("[CRSH]" .. event.time .. "|" .. ComposeUnitString(event.initiator))
 	end
 
+	-- Für Bodenfahrzeuge
 	if event.id == world.event.S_EVENT_DEAD and event.initiator then
-		pixLogger:info("[DEBUG]" .. mist.utils.tableShow(event))
-		local position = event.initiator:getPosition();
-		local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"
-		local groupName = event.initiator:getGroup()
-		if (groupName) then
-			groupName = groupName:getName()
-		else
-			groupName = "nil"
-		end
-		pixLogger:info("[DEAD]" .. groupName .. "|" .. event.initiator:getName() .. "|" .. event.initiator:getNumber() .. "|" .. event.initiator:getID() .. "|" .. event.initiator:getTypeName() .. "|" .. positionStr)
+		--pixLogger:info("[DEBUG]" .. mist.utils.tableShow(event))
+		pixLogger:info("[DEAD]" .. event.time .. "|" .. ComposeUnitString(event.initiator))
     end
+	
+	--if event.id == world.event.S_EVENT_PILOT_DEAD and event.initiator then
+	--	pixLogger:info("[PDED]" .. event.time .. "|" .. ComposeUnitString(event.initiator))
+    --end
 
+	-- Für eventuelle Details zu DEAD/CRSH
     if event.id == world.event.S_EVENT_KILL and event.target and event.initiator then
-		local position = event.initiator:getPosition();
-		local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"
-		local groupName = event.target:getGroup()
-		if (groupName) then
-			groupName = groupName:getName()
-		else
-			groupName = "nil"
+		-- event.weapon could nil
+		local weaponname = ""
+		if (event.weapon) then 
+			weaponname = event.weapon:getTypeName()
 		end
-		pixLogger:info("[KILL]" .. groupName .. "|" .. event.target:getName() .. "|" .. event.target:getNumber() .. "|" .. event.target:getID() .. "|" .. event.target:getTypeName() .. "|" .. positionStr .. "|" .. event.initiator:getName())
+		
+		pixLogger:info("[KILR]" .. event.time .. "|" .. ComposeUnitString(event.initiator) .. "|[TARG]" .. event.time .. "|" .. ComposeUnitString(event.target) .. "|" .. weaponname)
     end
 
     if event.id == world.event.S_EVENT_SHOT and event.weapon and event.initiator then
-		local position = event.initiator:getPosition();
-		local positionStr = "(" .. position.p.x .. "|" .. position.p.y .. "|" ..  position.p.z .. ")"
-		local groupName = event.initiator:getGroup()
-		if (groupName) then
-			groupName = groupName:getName()
-		else
-			groupName = "nil"
-		end
-		pixLogger:info("[SHOT]" .. groupName .. "|" .. event.initiator:getName() .. "|" .. event.initiator:getNumber() .. "|" .. event.initiator:getID() .. "|" .. event.initiator:getTypeName() .. "|" .. positionStr .. "|" .. event.weapon:getTypeName())
+		pixLogger:info("[SHOT]" .. event.time .. "|" .. ComposeUnitString(event.initiator) .. "|" .. event.weapon:getTypeName())
     end
 
     if event.id == world.event.S_EVENT_BASE_CAPTURED and event.place then
-		pixLogger:info("[BASE_CAPTURED]" .. event.place:getCoalition() .. "|" ..  event.place:getName())
+		pixLogger:info("[BASE]" .. event.time .. "|" .. event.place:getCoalition() .. "|" ..  event.place:getName())
     end
 
 end

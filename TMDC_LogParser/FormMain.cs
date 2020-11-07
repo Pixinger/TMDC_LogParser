@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -54,91 +55,6 @@ namespace TMDC_LogParser
             return missions.ToArray();
         }
 
-        private void lstMissions_SelectedIndexChanged(object sender, System.EventArgs e)
-        {
-            this.rtxtMission.Clear();
-
-            var mission = this.lstMissions.SelectedItem as Mission;
-            if (mission != null)
-            {
-                mission.Parse();
-
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("MISSION:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText($"START: {mission.InitTime}\n");
-                this.rtxtMission.AppendText($"END: {mission.EndTime}\n");
-
-                this.rtxtMission.AppendText("\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("CRASHED:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                var crashList = mission.GetCrashes();
-                foreach (var item in crashList)
-                {
-                    this.rtxtMission.AppendText(item.ToString() + "\n");
-                }
-
-                this.rtxtMission.AppendText("\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("DEAD:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                var deadList = mission.GetDeads();
-                foreach (var item in deadList)
-                {
-                    this.rtxtMission.AppendText(item.ToString() + "\n");
-                }
-
-                this.rtxtMission.AppendText("\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("KILLS:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                var killedList = mission.GetKills();
-                foreach (var item in killedList)
-                {
-                    this.rtxtMission.AppendText(item.ToString() + "\n");
-                }
-
-                this.rtxtMission.AppendText("\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("SHOTS:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                var shotList = mission.GetShots();
-                foreach (var item in shotList)
-                {
-                    this.rtxtMission.AppendText(item.ToString() + "\n");
-                }
-
-                this.rtxtMission.AppendText("\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                this.rtxtMission.AppendText("BASE-CAPTURES:\n");
-                this.rtxtMission.AppendText("-------------------------------\n");
-                var baseList = mission.GetCaptures();
-                foreach (var item in baseList)
-                {
-                    this.rtxtMission.AppendText(item.ToString() + "\n");
-                }
-
-
-                var summarySides = mission.GetSummarySides();
-                foreach (var side in summarySides)
-                {
-                    this.rtxtMission.AppendText("\n");
-                    this.rtxtMission.AppendText("-------------------------------\n");
-                    this.rtxtMission.AppendText($"SUMMARY: {side.SideId}\n");
-                    this.rtxtMission.AppendText("-------------------------------\n");
-                    foreach (var group in side.Groups)
-                    {
-                        this.rtxtMission.AppendText($"### Group: {group.Name}\n");
-                        foreach (var unit in group.Units)
-                        {
-                            this.rtxtMission.AppendText(unit.ToString() + "\n");
-                        }
-                    }
-                }
-
-            }
-        }
         private void menOpen_Click(object sender, System.EventArgs e)
         {
             using (OpenFileDialog dlg = new OpenFileDialog())
@@ -161,6 +77,36 @@ namespace TMDC_LogParser
                         }
                     }
                 }
+            }
+        }
+        private void lstMissions_SelectedIndexChanged(object sender, System.EventArgs e)
+        {
+            if (this.menSummaryDebug.Checked)
+                this.Summary(new StatisticDebug(this.lstMissions.SelectedItem as Mission));
+            else if (this.menSummaryWeb.Checked)
+                this.Summary(new StatisticWeb(this.lstMissions.SelectedItem as Mission));
+        }
+        private void menSummaryDebug_Click(object sender, System.EventArgs e)
+        {
+            menSummaryDebug.Checked = true;
+            menSummaryWeb.Checked = false;
+            this.Summary(new StatisticDebug(this.lstMissions.SelectedItem as Mission));
+        }
+
+        private void menSummaryWeb_Click(object sender, System.EventArgs e)
+        {
+            menSummaryDebug.Checked = false;
+            menSummaryWeb.Checked = true;
+            this.Summary(new StatisticWeb(this.lstMissions.SelectedItem as Mission));
+        }
+
+
+        private void Summary(StatisticBase statistic)
+        {
+            rtxtMission.Clear();
+            if (statistic != null)
+            {
+                rtxtMission.Lines = statistic.ToLines();
             }
         }
     }

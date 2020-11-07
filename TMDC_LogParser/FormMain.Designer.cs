@@ -32,6 +32,9 @@
             this.rtxtMission = new System.Windows.Forms.RichTextBox();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
             this.menOpen = new System.Windows.Forms.ToolStripMenuItem();
+            this.menSummary = new System.Windows.Forms.ToolStripMenuItem();
+            this.menSummaryDebug = new System.Windows.Forms.ToolStripMenuItem();
+            this.menSummaryWeb = new System.Windows.Forms.ToolStripMenuItem();
             this.menuStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -63,7 +66,8 @@
             // menuStrip1
             // 
             this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menOpen});
+            this.menOpen,
+            this.menSummary});
             this.menuStrip1.Location = new System.Drawing.Point(0, 0);
             this.menuStrip1.Name = "menuStrip1";
             this.menuStrip1.Size = new System.Drawing.Size(1416, 24);
@@ -76,6 +80,31 @@
             this.menOpen.Size = new System.Drawing.Size(48, 20);
             this.menOpen.Text = "Open";
             this.menOpen.Click += new System.EventHandler(this.menOpen_Click);
+            // 
+            // menSummary
+            // 
+            this.menSummary.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menSummaryDebug,
+            this.menSummaryWeb});
+            this.menSummary.Name = "menSummary";
+            this.menSummary.Size = new System.Drawing.Size(70, 20);
+            this.menSummary.Text = "Summary";
+            // 
+            // menSummaryDebug
+            // 
+            this.menSummaryDebug.Name = "menSummaryDebug";
+            this.menSummaryDebug.Size = new System.Drawing.Size(180, 22);
+            this.menSummaryDebug.Text = "Debug";
+            this.menSummaryDebug.Click += new System.EventHandler(this.menSummaryDebug_Click);
+            // 
+            // menSummaryWeb
+            // 
+            this.menSummaryWeb.Checked = true;
+            this.menSummaryWeb.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.menSummaryWeb.Name = "menSummaryWeb";
+            this.menSummaryWeb.Size = new System.Drawing.Size(180, 22);
+            this.menSummaryWeb.Text = "Web";
+            this.menSummaryWeb.Click += new System.EventHandler(this.menSummaryWeb_Click);
             // 
             // FormMain
             // 
@@ -101,6 +130,9 @@
         private System.Windows.Forms.RichTextBox rtxtMission;
         private System.Windows.Forms.MenuStrip menuStrip1;
         private System.Windows.Forms.ToolStripMenuItem menOpen;
+        private System.Windows.Forms.ToolStripMenuItem menSummary;
+        private System.Windows.Forms.ToolStripMenuItem menSummaryDebug;
+        private System.Windows.Forms.ToolStripMenuItem menSummaryWeb;
     }
 }
 
